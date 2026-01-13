@@ -2,52 +2,101 @@ import React, { useState } from "react";
 import Wheel from "./components/Wheel.jsx";
 
 export default function App() {
-  const [winner, setWinner] = useState(null);
+  const [winner1, setWinner1] = useState(null);
+  const [winnerIdx1, setWinnerIdx1] = useState(null);
 
-  const segments = [
-    { text: "Paragraph 1: Put a longer prompt here. Multiple sentences are fine." },
-    { text: "Paragraph 2: This slice contains a short paragraph that will wrap on the wheel." },
-    { text: "Paragraph 3: The wheel shows a preview. The full text is shown in the panel." },
-    { text: "Paragraph 4: Add as many slices as you want." },
-    { text: "Paragraph 5: You can later load these from a JSON file too." },
-    { text: "Paragraph 6: Example content." },
+  const [winner2, setWinner2] = useState(null);
+  const [winnerIdx2, setWinnerIdx2] = useState(null);
+
+  const wheelSize = 480;
+
+  const soniaSegments = [
+    { text: "French, b. Hradyz’k, Ukraine, 1885–1979" },
+    { text: "French, b. Ukraine, 1885–1979" },
+    { text: "Russian (b. Ukraine, active France), 1885–1979" },
+    { text: "French, b. Gradizhsk, Russia (now Ukraine), active in France, 1885–1979" },
+    { text: "Russian, active in France, 1885–1979" },
+  ];
+
+  const chagallSegments = [
+    { text: "Belorussian, 1887–1985" },
+    { text: "b. 1887, Vitebsk, Russian Empire (now Belarus)" },
+    { text: "French, born in the Russian Empire, present-day Belarus (1887–1985)" },
+    { text: "(Russian, 1887–1985), designer" },
+    { text: "Vitebsk, Belarus, Europe" },
   ];
 
   return (
     <div className="min-h-screen bg-gray-50 grid place-items-center p-6">
-      <div className="w-full max-w-5xl">
-        <h1 className="text-center text-3xl font-bold text-gray-900">Spin Wheel</h1>
-        <p className="mt-2 text-center text-gray-600">
-          Each slice supports paragraph text. Spin, then read the result.
-        </p>
+      <div className="w-full max-w-6xl">
+        <h1 className="text-center text-3xl font-bold text-gray-900">
+          Artists Location Wheel of Fortune
+        </h1>
 
-        <div className="mt-8 flex flex-col md:flex-row items-center justify-center gap-8">
-          <div className="flex justify-center w-full md:w-auto">
-            <Wheel segments={segments} onResult={(seg) => setWinner(seg)} size={520} />
+        <div className="mt-10 grid gap-12 md:grid-cols-2 items-start justify-items-center">
+          {/* Wheel 1 */}
+          <div className="flex flex-col items-center gap-14 w-full">
+            <h2 className="text-xl font-semibold text-gray-900 text-center">
+              Sonia Delaunay Terk
+            </h2>
+
+            <Wheel
+              segments={soniaSegments}
+              size={wheelSize}
+              selectedIndex={winnerIdx1}
+              onResult={(seg, idx) => {
+                setWinner1(seg);
+                setWinnerIdx1(idx);
+              }}
+            />
+
+            <div className="winner-box w-full max-w-md aspect-square rounded-2xl bg-white p-6 shadow border border-gray-200">
+              <div className="h-full w-full overflow-auto flex items-center justify-center">
+                {winner1 ? (
+                  <div className="whitespace-pre-wrap text-gray-800 leading-relaxed text-center">
+                    {winner1.text}
+                  </div>
+                ) : null}
+              </div>
+            </div>
           </div>
 
-          <div className="w-full md:max-w-sm rounded-2xl bg-white p-5 shadow">
-            <h2 className="text-lg font-semibold text-gray-900 text-center">Selected</h2>
+          {/* Wheel 2 */}
+          <div className="flex flex-col items-center gap-14 w-full">
+            <h2 className="text-xl font-semibold text-gray-900 text-center">
+              Marc Chagall
+            </h2>
 
-            {winner ? (
-              <div className="mt-3 whitespace-pre-wrap text-gray-800 leading-relaxed">
-                {winner.text}
+            <Wheel
+              segments={chagallSegments}
+              size={wheelSize}
+              selectedIndex={winnerIdx2}
+              onResult={(seg, idx) => {
+                setWinner2(seg);
+                setWinnerIdx2(idx);
+              }}
+            />
+
+            <div className="winner-box w-full max-w-md aspect-square rounded-2xl bg-white p-6 shadow border border-gray-200">
+              <div className="h-full w-full overflow-auto flex items-center justify-center">
+                {winner2 ? (
+                  <div className="whitespace-pre-wrap text-gray-800 leading-relaxed text-center">
+                    {winner2.text}
+                  </div>
+                ) : null}
               </div>
-            ) : (
-              <p className="mt-3 text-gray-600 text-center">
-                Click SPIN to pick a segment.
-              </p>
-            )}
-
-            <hr className="my-5" />
-
-            <p className="text-sm text-gray-600 text-center">
-              Tip: If your paragraphs are very long, keep wheel previews short and rely on this panel for full readability.
-            </p>
+            </div>
           </div>
         </div>
+
+        <p className="mt-8 text-center text-sm text-gray-600">
+          The winning slice is highlighted directly on the wheel.
+        </p>
       </div>
     </div>
   );
 }
+
+
+
 
