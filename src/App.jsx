@@ -28,6 +28,7 @@ return (
 
         <div className="rounded-2xl bg-white p-5 shadow">
           <h2 className="text-lg font-semibold text-gray-900">Selected</h2>
+
           {winner ? (
             <div className="mt-3 whitespace-pre-wrap text-gray-800 leading-relaxed">
               {winner.text}

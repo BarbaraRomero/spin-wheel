@@ -55,10 +55,11 @@ export default function Wheel({ segments, onResult, size = 520 }) {
     const cx = width / 2;
     const cy = height / 2;
     const r = Math.min(width, height) * 0.46;
+    const twoPi = Math.PI * 2;
 
     // outer ring
     ctx.beginPath();
-    ctx.arc(cx, cy, r + 8, 0, Math.PI * 2);
+    ctx.arc(cx, cy, r + 8, 0, twoPi);
     ctx.fillStyle = "#111827";
     ctx.fill();
 
@@ -85,19 +86,33 @@ export default function Wheel({ segments, onResult, size = 520 }) {
 
       ctx.save();
       ctx.translate(cx, cy);
+
+      // 1) align with slice
       ctx.rotate(mid);
+
+      // 2) move text outward
       ctx.translate(r * 0.62, 0);
 
-      // keep text mostly upright
+      // 3) orient text "downwards" along the radius
+      // (this is the same intent as your code, but the flip check is fixed)
       ctx.rotate(Math.PI / 2);
-      if (mid > Math.PI / 2 && mid < (3 * Math.PI) / 2) ctx.rotate(Math.PI);
+
+      // 4) FIX: flip based on the FINAL angle so it never ends up upside down
+      // final text direction relative to canvas is (mid + PI/2)
+      let finalAngle = (mid + Math.PI / 2) % twoPi;
+      if (finalAngle < 0) finalAngle += twoPi;
+
+      // If text would be upside down (between 90° and 270°), rotate 180°
+      if (finalAngle > Math.PI / 2 && finalAngle < (3 * Math.PI) / 2) {
+        ctx.rotate(Math.PI);
+      }
 
       const maxWidth = r * 0.55;
       const fontSize = Math.max(11, Math.floor(r / 26));
       const lineHeight = Math.floor(fontSize * 1.18);
 
       ctx.fillStyle = "#111827";
-      ctx.font = `${fontSize}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
+      ctx.font = `bold ${fontSize}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
@@ -123,7 +138,7 @@ export default function Wheel({ segments, onResult, size = 520 }) {
 
     // center circle
     ctx.beginPath();
-    ctx.arc(cx, cy, r * 0.12, 0, Math.PI * 2);
+    ctx.arc(cx, cy, r * 0.12, 0, twoPi);
     ctx.fillStyle = "#111827";
     ctx.fill();
   }
@@ -208,3 +223,4 @@ export default function Wheel({ segments, onResult, size = 520 }) {
     </div>
   );
 }
+
