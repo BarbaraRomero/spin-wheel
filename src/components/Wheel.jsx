@@ -25,6 +25,8 @@ function wrapLines(ctx, text, maxWidth) {
 
 export default function Wheel({ segments, onResult, size = 520 }) {
   const canvasRef = useRef(null);
+  const dprRef = useRef(window.devicePixelRatio || 1);
+
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
 
@@ -32,9 +34,6 @@ export default function Wheel({ segments, onResult, size = 520 }) {
     () => ["#FDE68A", "#BFDBFE", "#BBF7D0", "#FBCFE8", "#DDD6FE", "#FED7AA"],
     []
   );
-
-  const width = size;
-  const height = size;
 
   const arc = (Math.PI * 2) / Math.max(segments.length, 1);
   const pointerAngle = -Math.PI / 2;
@@ -46,15 +45,32 @@ export default function Wheel({ segments, onResult, size = 520 }) {
     return clamp(idx, 0, segments.length - 1);
   }
 
+  function resizeCanvas() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    dprRef.current = dpr;
+
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    canvas.style.width = `${size}px`;
+    canvas.style.height = `${size}px`;
+  }
+
   function draw(rot) {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, width, height);
 
-    const cx = width / 2;
-    const cy = height / 2;
-    const r = Math.min(width, height) * 0.46;
+    const ctx = canvas.getContext("2d");
+    const dpr = dprRef.current;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, size, size);
+
+    const cx = size / 2;
+    const cy = size / 2;
+    const r = Math.min(size, size) * 0.46;
     const twoPi = Math.PI * 2;
 
     // outer ring
@@ -65,14 +81,12 @@ export default function Wheel({ segments, onResult, size = 520 }) {
 
     if (!segments.length) return;
 
-    // slices
     for (let i = 0; i < segments.length; i++) {
       const start = rot + i * arc;
-      const end = start + arc;
 
       ctx.beginPath();
       ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, r, start, end);
+      ctx.arc(cx, cy, r, start, start + arc);
       ctx.closePath();
       ctx.fillStyle = colors[i % colors.length];
       ctx.fill();
@@ -86,43 +100,30 @@ export default function Wheel({ segments, onResult, size = 520 }) {
 
       ctx.save();
       ctx.translate(cx, cy);
-
-      // 1) align with slice
       ctx.rotate(mid);
-
-      // 2) move text outward
       ctx.translate(r * 0.62, 0);
 
-      // 3) orient text "downwards" along the radius
-      // (this is the same intent as your code, but the flip check is fixed)
+      // text always upright
       ctx.rotate(Math.PI / 2);
-
-      // 4) FIX: flip based on the FINAL angle so it never ends up upside down
-      // final text direction relative to canvas is (mid + PI/2)
       let finalAngle = (mid + Math.PI / 2) % twoPi;
       if (finalAngle < 0) finalAngle += twoPi;
-
-      // If text would be upside down (between 90° and 270°), rotate 180°
       if (finalAngle > Math.PI / 2 && finalAngle < (3 * Math.PI) / 2) {
         ctx.rotate(Math.PI);
       }
 
       const maxWidth = r * 0.55;
-      const fontSize = Math.max(11, Math.floor(r / 26));
-      const lineHeight = Math.floor(fontSize * 1.18);
+      const fontSize = Math.max(12, Math.floor(r / 24));
+      const lineHeight = Math.floor(fontSize * 1.25);
 
       ctx.fillStyle = "#111827";
-      ctx.font = `bold ${fontSize}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
+      ctx.font = `900 ${fontSize}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
       const lines = wrapLines(ctx, segments[i].text, maxWidth);
-
-      // Keep it readable on the wheel: show a preview
-      const maxLines = 6;
-      const shown = lines.slice(0, maxLines);
-      if (lines.length > maxLines && shown.length) {
-        shown[shown.length - 1] = `${shown[shown.length - 1]} …`;
+      const shown = lines.slice(0, 6);
+      if (lines.length > 6 && shown.length) {
+        shown[shown.length - 1] += " …";
       }
 
       const blockHeight = shown.length * lineHeight;
@@ -144,23 +145,25 @@ export default function Wheel({ segments, onResult, size = 520 }) {
   }
 
   useEffect(() => {
+    resizeCanvas();
     draw(rotation);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rotation, segments, size]);
+  }, [size, segments.length]);
+
+  useEffect(() => {
+    draw(rotation);
+  }, [rotation]);
 
   function spin() {
     if (spinning || !segments.length) return;
 
     const target = Math.floor(Math.random() * segments.length);
     const base = pointerAngle - (target + 0.5) * arc;
-
     const minSpins = 5;
     const twoPi = Math.PI * 2;
-
     const current = rotation;
     const m = Math.ceil((current + minSpins * twoPi - base) / twoPi);
     const final = base + m * twoPi;
-
     const durationMs = 4200;
     const startTime = performance.now();
     const startRot = current;
@@ -173,15 +176,11 @@ export default function Wheel({ segments, onResult, size = 520 }) {
     }
 
     function frame(now) {
-      const t = clamp((now - startTime) / durationMs, 0, 1);
-      const eased = easeOutCubic(t);
-      const next = startRot + delta * eased;
-
+      const t = Math.min(1, (now - startTime) / durationMs);
+      const next = startRot + delta * (1 - Math.pow(1 - t, 3));
       setRotation(next);
-
-      if (t < 1) {
-        requestAnimationFrame(frame);
-      } else {
+      if (t < 1) requestAnimationFrame(frame);
+      else {
         setSpinning(false);
         const winnerIdx = getWinnerIndex(next);
         onResult?.(segments[winnerIdx], winnerIdx);
@@ -192,35 +191,36 @@ export default function Wheel({ segments, onResult, size = 520 }) {
   }
 
   return (
-    <div className="relative inline-block">
-      <canvas
-        ref={canvasRef}
-        width={width}
-        height={height}
-        className="rounded-2xl shadow bg-white"
-      />
+  <div className="relative inline-block" style={{ width: size, height: size }}>
+    <canvas
+      ref={canvasRef}
+      style={{ width: size, height: size }}
+      className="rounded-2xl shadow bg-white"
+    />
 
-      {/* pointer */}
-      <div
-        className="absolute top-1/2 -right-3 -translate-y-1/2"
-        style={{
-          width: 0,
-          height: 0,
-          borderTop: "14px solid transparent",
-          borderBottom: "14px solid transparent",
-          borderLeft: "26px solid #111827",
-        }}
-        aria-hidden="true"
-      />
+    {/* pointer (inline styles so it cannot drift due to missing classes) */}
+    <div
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        top: "50%",
+        right: "-18px",
+        transform: "translateY(-50%)",
+        width: 0,
+        height: 0,
+        borderTop: "14px solid transparent",
+        borderBottom: "14px solid transparent",
+        borderLeft: "26px solid #111827",
+      }}
+    />
 
-      <button
-        onClick={spin}
-        disabled={spinning}
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white px-5 py-3 text-sm font-semibold shadow disabled:opacity-60"
-      >
-        {spinning ? "Spinning..." : "SPIN"}
-      </button>
-    </div>
-  );
+    <button
+      onClick={spin}
+      disabled={spinning}
+      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white px-5 py-3 text-sm font-semibold shadow disabled:opacity-60"
+    >
+      {spinning ? "Spinning..." : "SPIN"}
+    </button>
+  </div>
+);
 }
-

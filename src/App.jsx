@@ -13,39 +13,41 @@ export default function App() {
     { text: "Paragraph 6: Example content." },
   ];
 
-return (
-  <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-    <div className="w-full max-w-5xl">
-      <h1 className="text-2xl font-bold text-gray-900 text-center">Spin Wheel</h1>
-      <p className="mt-2 text-gray-600 text-center">
-        Each slice supports paragraph text. Spin, then read the full selection.
-      </p>
+  return (
+    <div className="min-h-screen bg-gray-50 grid place-items-center p-6">
+      <div className="w-full max-w-5xl">
+        <h1 className="text-center text-3xl font-bold text-gray-900">Spin Wheel</h1>
+        <p className="mt-2 text-center text-gray-600">
+          Each slice supports paragraph text. Spin, then read the result.
+        </p>
 
-      <div className="mt-6 grid gap-6 md:grid-cols-[560px_1fr] items-center">
-        <div className="flex justify-center">
-          <Wheel segments={segments} onResult={(seg) => setWinner(seg)} size={520} />
-        </div>
+        <div className="mt-8 flex flex-col md:flex-row items-center justify-center gap-8">
+          <div className="flex justify-center w-full md:w-auto">
+            <Wheel segments={segments} onResult={(seg) => setWinner(seg)} size={520} />
+          </div>
 
-        <div className="rounded-2xl bg-white p-5 shadow">
-          <h2 className="text-lg font-semibold text-gray-900">Selected</h2>
+          <div className="w-full md:max-w-sm rounded-2xl bg-white p-5 shadow">
+            <h2 className="text-lg font-semibold text-gray-900 text-center">Selected</h2>
 
-          {winner ? (
-            <div className="mt-3 whitespace-pre-wrap text-gray-800 leading-relaxed">
-              {winner.text}
-            </div>
-          ) : (
-            <p className="mt-3 text-gray-600">Click SPIN to pick a segment.</p>
-          )}
+            {winner ? (
+              <div className="mt-3 whitespace-pre-wrap text-gray-800 leading-relaxed">
+                {winner.text}
+              </div>
+            ) : (
+              <p className="mt-3 text-gray-600 text-center">
+                Click SPIN to pick a segment.
+              </p>
+            )}
 
-          <hr className="my-5" />
+            <hr className="my-5" />
 
-          <p className="text-sm text-gray-600">
-            Tip: If your paragraphs are very long, keep the wheel preview short and rely on this panel for full readability.
-          </p>
+            <p className="text-sm text-gray-600 text-center">
+              Tip: If your paragraphs are very long, keep wheel previews short and rely on this panel for full readability.
+            </p>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
 }
 
