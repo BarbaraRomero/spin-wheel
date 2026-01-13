@@ -3,8 +3,9 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  base: "/spin-wheel/", // <-- IMPORTANT: repo name
+  base: "/spin-wheel/",
+  plugins: [react()],
+  
 });
 
 
