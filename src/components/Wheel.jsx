@@ -1,0 +1,210 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+
+function clamp(n, a, b) {
+  return Math.max(a, Math.min(b, n));
+}
+
+function wrapLines(ctx, text, maxWidth) {
+  const clean = (text || "").replace(/\s+/g, " ").trim();
+  const words = clean ? clean.split(" ") : [""];
+  const lines = [];
+  let line = "";
+
+  for (const w of words) {
+    const test = line ? `${line} ${w}` : w;
+    if (ctx.measureText(test).width <= maxWidth) {
+      line = test;
+    } else {
+      if (line) lines.push(line);
+      line = w;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+export default function Wheel({ segments, onResult, size = 520 }) {
+  const canvasRef = useRef(null);
+  const [rotation, setRotation] = useState(0);
+  const [spinning, setSpinning] = useState(false);
+
+  const colors = useMemo(
+    () => ["#FDE68A", "#BFDBFE", "#BBF7D0", "#FBCFE8", "#DDD6FE", "#FED7AA"],
+    []
+  );
+
+  const width = size;
+  const height = size;
+
+  const arc = (Math.PI * 2) / Math.max(segments.length, 1);
+  const pointerAngle = -Math.PI / 2;
+
+  function getWinnerIndex(rot) {
+    const twoPi = Math.PI * 2;
+    const a = ((pointerAngle - rot) % twoPi + twoPi) % twoPi;
+    const idx = Math.floor(a / arc);
+    return clamp(idx, 0, segments.length - 1);
+  }
+
+  function draw(rot) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, width, height);
+
+    const cx = width / 2;
+    const cy = height / 2;
+    const r = Math.min(width, height) * 0.46;
+
+    // outer ring
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + 8, 0, Math.PI * 2);
+    ctx.fillStyle = "#111827";
+    ctx.fill();
+
+    if (!segments.length) return;
+
+    // slices
+    for (let i = 0; i < segments.length; i++) {
+      const start = rot + i * arc;
+      const end = start + arc;
+
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, start, end);
+      ctx.closePath();
+      ctx.fillStyle = colors[i % colors.length];
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(17, 24, 39, 0.35)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // text
+      const mid = start + arc / 2;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(mid);
+      ctx.translate(r * 0.62, 0);
+
+      // keep text mostly upright
+      ctx.rotate(Math.PI / 2);
+      if (mid > Math.PI / 2 && mid < (3 * Math.PI) / 2) ctx.rotate(Math.PI);
+
+      const maxWidth = r * 0.55;
+      const fontSize = Math.max(11, Math.floor(r / 26));
+      const lineHeight = Math.floor(fontSize * 1.18);
+
+      ctx.fillStyle = "#111827";
+      ctx.font = `${fontSize}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      const lines = wrapLines(ctx, segments[i].text, maxWidth);
+
+      // Keep it readable on the wheel: show a preview
+      const maxLines = 6;
+      const shown = lines.slice(0, maxLines);
+      if (lines.length > maxLines && shown.length) {
+        shown[shown.length - 1] = `${shown[shown.length - 1]} …`;
+      }
+
+      const blockHeight = shown.length * lineHeight;
+      let y = -blockHeight / 2 + lineHeight / 2;
+
+      for (const ln of shown) {
+        ctx.fillText(ln, 0, y);
+        y += lineHeight;
+      }
+
+      ctx.restore();
+    }
+
+    // center circle
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.12, 0, Math.PI * 2);
+    ctx.fillStyle = "#111827";
+    ctx.fill();
+  }
+
+  useEffect(() => {
+    draw(rotation);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rotation, segments, size]);
+
+  function spin() {
+    if (spinning || !segments.length) return;
+
+    const target = Math.floor(Math.random() * segments.length);
+    const base = pointerAngle - (target + 0.5) * arc;
+
+    const minSpins = 5;
+    const twoPi = Math.PI * 2;
+
+    const current = rotation;
+    const m = Math.ceil((current + minSpins * twoPi - base) / twoPi);
+    const final = base + m * twoPi;
+
+    const durationMs = 4200;
+    const startTime = performance.now();
+    const startRot = current;
+    const delta = final - startRot;
+
+    setSpinning(true);
+
+    function easeOutCubic(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+
+    function frame(now) {
+      const t = clamp((now - startTime) / durationMs, 0, 1);
+      const eased = easeOutCubic(t);
+      const next = startRot + delta * eased;
+
+      setRotation(next);
+
+      if (t < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        setSpinning(false);
+        const winnerIdx = getWinnerIndex(next);
+        onResult?.(segments[winnerIdx], winnerIdx);
+      }
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  return (
+    <div className="relative inline-block">
+      <canvas
+        ref={canvasRef}
+        width={width}
+        height={height}
+        className="rounded-2xl shadow bg-white"
+      />
+
+      {/* pointer */}
+      <div
+        className="absolute top-1/2 -right-3 -translate-y-1/2"
+        style={{
+          width: 0,
+          height: 0,
+          borderTop: "14px solid transparent",
+          borderBottom: "14px solid transparent",
+          borderLeft: "26px solid #111827",
+        }}
+        aria-hidden="true"
+      />
+
+      <button
+        onClick={spin}
+        disabled={spinning}
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white px-5 py-3 text-sm font-semibold shadow disabled:opacity-60"
+      >
+        {spinning ? "Spinning..." : "SPIN"}
+      </button>
+    </div>
+  );
+}
